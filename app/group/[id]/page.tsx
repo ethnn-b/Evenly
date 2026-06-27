@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { createServerSupabase } from "@/lib/supabaseClient";
+import { createServerSupabase } from "@/lib/supabaseServer";
 import { computeBalances } from "@/lib/settle";
 import { formatCents } from "@/lib/format";
 import BalanceList from "@/components/BalanceList";

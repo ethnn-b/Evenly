@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { createServerSupabase } from "@/lib/supabaseClient";
+import { createServerSupabase } from "@/lib/supabaseServer";
 import ExpenseForm from "@/components/ExpenseForm";
 import type { MemberWithProfile, Profile } from "@/lib/types";
 

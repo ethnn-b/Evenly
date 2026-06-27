@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerSupabase } from "@/lib/supabaseClient";
+import { createServerSupabase } from "@/lib/supabaseServer";
 import GroupList from "@/components/GroupList";
 import CreateGroupForm from "@/components/CreateGroupForm";
 import SignOutButton from "@/components/SignOutButton";

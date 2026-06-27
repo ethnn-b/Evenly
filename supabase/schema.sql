@@ -124,11 +124,17 @@ create policy "users can update their own profile"
   with check (id = auth.uid());
 
 -- groups ---------------------------------------------------------------------
+-- A user can read a group if they belong to it OR they created it. The
+-- created_by arm is essential for bootstrap: right after creating a group the
+-- creator is not yet a member, and without it (a) the .insert().select() that
+-- returns the new row would be filtered out by RLS, and (b) the group_members
+-- insert policy below, which checks group ownership via a subquery on this
+-- table, could not see the group either. Both would fail.
 drop policy if exists "members can read their groups" on public.groups;
 create policy "members can read their groups"
   on public.groups for select
   to authenticated
-  using (public.is_group_member(id));
+  using (public.is_group_member(id) or created_by = auth.uid());
 
 drop policy if exists "users can create groups" on public.groups;
 create policy "users can create groups"
