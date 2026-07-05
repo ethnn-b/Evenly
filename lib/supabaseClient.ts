@@ -3,7 +3,7 @@
 // imports next/headers, which cannot be reached from a client bundle.
 //
 // The anon key is public on purpose. RLS in the database is what protects data,
-// not secrecy of the key. See CLAUDE.md.
+// not secrecy of the key.
 
 import { createBrowserClient } from "@supabase/ssr";
 

@@ -39,6 +39,19 @@ export interface ExpenseSplit {
   amount_cents: number;
 }
 
+// A recorded payment that settles debt: from_user paid to_user this amount in
+// a group. Folded into balances the same way an expense is (the payer is
+// credited, the receiver debited), so it drives the balances back toward zero.
+export interface Settlement {
+  id: string;
+  group_id: string;
+  from_user: string;
+  to_user: string;
+  amount_cents: number;
+  created_by: string;
+  created_at: string;
+}
+
 // A single parsed line item from a receipt. price is in cents.
 export interface ReceiptItem {
   name: string;

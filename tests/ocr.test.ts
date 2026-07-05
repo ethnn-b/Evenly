@@ -107,4 +107,41 @@ describe("parseReceiptText", () => {
     const text = ["9.99", "Total 9.99"].join("\n");
     expect(parseReceiptText(text).items).toEqual([]);
   });
+
+  // Cases found by running the parser on real SROIE receipt images, where the
+  // largest "total" line is not the amount actually due. See scripts/ocr-eval.mjs.
+
+  it("ignores a per-tax-band 'total supplies' line (receipt 352)", () => {
+    // The 6% GST band total (30.01) is larger than the amount payable (22.58);
+    // excluding the "supplies" lines leaves the payable total as the max.
+    const text = [
+      "Total 6% supplies (excl. GST): 28.32",
+      "Total 6% supplies (Inc. GST): 30.01",
+      "Total Payable: 22.58",
+    ].join("\n");
+    expect(parseReceiptText(text).total).toBe(2258);
+  });
+
+  it("ignores the pre-tax 'excluding GST' total (receipt 608)", () => {
+    // Pre-tax 163.50 is larger than the inclusive-of-GST total 162.71;
+    // excluding the "excluding GST" and "Total GST" lines fixes the pick.
+    const text = [
+      "Total Sales (Excluding GST): 163.50",
+      "Total GST: 9.21",
+      "Total Sales (Inclusive of GST): 162.71",
+    ].join("\n");
+    expect(parseReceiptText(text).total).toBe(16271);
+  });
+
+  it("still reads a spaced 'Sub Total' when it is the only total (receipt 098)", () => {
+    // Some receipts print only "Sub Total" as the amount due, so it must not be
+    // dropped. "Total GST" and item-count lines are excluded.
+    const text = [
+      "Gross Amount: 40.00",
+      "Total GST Amt: 2.40",
+      "Sub Total: 42.40",
+      "Total Item Sold: 3",
+    ].join("\n");
+    expect(parseReceiptText(text).total).toBe(4240);
+  });
 });

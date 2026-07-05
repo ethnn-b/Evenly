@@ -18,7 +18,14 @@ coverage
 
 # build output
 dist
+*.tsbuildinfo
 
 # misc
 .DS_Store
 *.log
+
+# ocr eval dataset cache (downloaded on demand by scripts/ocr-eval.mjs)
+.ocr-eval-cache
+
+# local working notes, not published
+CLAUDE.md

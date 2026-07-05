@@ -57,6 +57,33 @@ prefill a form, which is the actual goal.
 real problem, a server route calling a cloud OCR provider is the natural upgrade, and the parser
 in `lib/ocr.ts` would not have to change much.
 
+## Picking the grand total off a receipt
+
+**Decision:** treat a line as a total candidate if it names a total (the word "total", or a label
+like "payable", "amount due", or "inclusive of GST") and is not a known non-grand-total line, then
+take the largest candidate.
+
+**Why this shape:** the first version just took the largest line containing "total". Running the
+parser on real receipt images (see `scripts/ocr-eval.mjs`, scored against the ICDAR 2019 SROIE
+ground-truth totals) showed that fails a lot, because receipts print several "total" lines and
+some are bigger than the amount due: per-tax-band lines ("Total 6% supplies"), pre-tax lines
+("Total Sales Excluding GST"), tax subtotals ("Total GST"), and a gross line ("Total Gross").
+Excluding those and keeping the max lifted exact-total accuracy from 65% to 70% on a 113-receipt
+sample, with no regressions in that sample.
+
+**Things that did not work, and why they are not in the code:**
+
+- Excluding a spaced "Sub Total". Some receipts print only "Sub Total" as the amount due, so
+  dropping it lost the total on those. A one-word "subtotal" is still excluded.
+- Preferring a labelled grand total over a plain "Total" (a rank). It picked a pre-rounding
+  "Inclusive of GST" line over the final rounded "Total" on a few receipts, and scored worse than
+  the plain max. So the rank idea was dropped.
+
+**Known limits:** when Tesseract misreads the digits of the total itself (for example reads 9.00 as
+9.60), no line-selection rule can recover it. Those account for most of the remaining misses and
+are an OCR-engine limit, not a parser one. The unit tests in `tests/ocr.test.ts` lock in the
+selection rules against sample text; the image eval measures the whole pipeline.
+
 ## Greedy vs optimal settlement
 
 **Decision:** greedy (largest creditor against largest debtor, repeat).

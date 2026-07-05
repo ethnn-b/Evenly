@@ -11,6 +11,7 @@ import type {
   ExpenseSplit,
   MemberWithProfile,
   Profile,
+  Settlement,
 } from "@/lib/types";
 
 // Server component for one group: members, expenses, and computed balances.
@@ -73,15 +74,31 @@ export default async function GroupPage({
     splits = splitRows ?? [];
   }
 
-  const balances = computeBalances(
-    expenses.map((e) => ({ user_id: e.payer_id, amount_cents: e.amount_cents })),
-    splits.map((s) => ({ user_id: s.user_id, amount_cents: s.amount_cents }))
-  )
+  // Settlements recorded in this group. Each is folded into balances like an
+  // expense: the payer is credited, the receiver debited, so a recorded payment
+  // moves both parties toward zero.
+  const { data: settlementRows } = await supabase
+    .from("settlements")
+    .select("id, group_id, from_user, to_user, amount_cents, created_by, created_at")
+    .eq("group_id", groupId);
+  const settlements: Settlement[] = settlementRows ?? [];
+
+  const paidOut = [
+    ...expenses.map((e) => ({ user_id: e.payer_id, amount_cents: e.amount_cents })),
+    ...settlements.map((s) => ({ user_id: s.from_user, amount_cents: s.amount_cents })),
+  ];
+  const owed = [
+    ...splits.map((s) => ({ user_id: s.user_id, amount_cents: s.amount_cents })),
+    ...settlements.map((s) => ({ user_id: s.to_user, amount_cents: s.amount_cents })),
+  ];
+
+  const computed = computeBalances(paidOut, owed);
+  const seen = new Set(computed.map((b) => b.user_id));
+  const balances = computed
     // Make sure every member appears, even at zero.
     .concat(
       members
-        .filter((m) => !expenses.some((e) => e.payer_id === m.user_id))
-        .filter((m) => !splits.some((s) => s.user_id === m.user_id))
+        .filter((m) => !seen.has(m.user_id))
         .map((m) => ({ user_id: m.user_id, net_cents: 0 }))
     )
     .sort((a, b) => b.net_cents - a.net_cents);
@@ -132,7 +149,12 @@ export default async function GroupPage({
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
           Balances
         </h2>
-        <BalanceList members={members} balances={balances} />
+        <BalanceList
+          members={members}
+          balances={balances}
+          groupId={groupId}
+          currentUserId={user.id}
+        />
       </section>
 
       <section>

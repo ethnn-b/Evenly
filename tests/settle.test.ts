@@ -62,6 +62,65 @@ describe("computeBalances", () => {
   });
 });
 
+// settlements folded into balances -------------------------------------------
+//
+// The group page maps each recorded settlement into computeBalances the same
+// way it maps expenses: the payer (from_user) goes into the paid list, the
+// receiver (to_user) into the owed list. These tests model the scenario "A owes
+// B 10.00 and A owes C 20.00", created by B and C each fronting money that only
+// A owes back, then A settling those debts.
+
+describe("settlements fold into balances", () => {
+  // A owes B 10.00 and A owes C 20.00.
+  const paid = [
+    { user_id: "B", amount_cents: 1000 }, // B fronted 10.00
+    { user_id: "C", amount_cents: 2000 }, // C fronted 20.00
+  ];
+  const owed = [
+    { user_id: "A", amount_cents: 1000 }, // A owes B's 10.00
+    { user_id: "A", amount_cents: 2000 }, // A owes C's 20.00
+  ];
+
+  it("starts with A owing 30.00 across two creditors", () => {
+    const byId = Object.fromEntries(
+      computeBalances(paid, owed).map((b) => [b.user_id, b.net_cents])
+    );
+    expect(byId.A).toBe(-3000);
+    expect(byId.B).toBe(1000);
+    expect(byId.C).toBe(2000);
+  });
+
+  it("clears only the paid debt when A settles C individually", () => {
+    // A records paying C 20.00: from=A into paid, to=C into owed.
+    const byId = Object.fromEntries(
+      computeBalances(
+        [...paid, { user_id: "A", amount_cents: 2000 }],
+        [...owed, { user_id: "C", amount_cents: 2000 }]
+      ).map((b) => [b.user_id, b.net_cents])
+    );
+    expect(byId.C).toBe(0); // C is settled
+    expect(byId.A).toBe(-1000); // A still owes B 10.00
+    expect(byId.B).toBe(1000);
+  });
+
+  it("clears everyone once A settles both B and C", () => {
+    const balances = computeBalances(
+      [
+        ...paid,
+        { user_id: "A", amount_cents: 2000 },
+        { user_id: "A", amount_cents: 1000 },
+      ],
+      [
+        ...owed,
+        { user_id: "C", amount_cents: 2000 },
+        { user_id: "B", amount_cents: 1000 },
+      ]
+    );
+    for (const b of balances) expect(b.net_cents).toBe(0);
+    expect(settle(balances)).toEqual([]);
+  });
+});
+
 // settle ----------------------------------------------------------------------
 
 describe("settle", () => {

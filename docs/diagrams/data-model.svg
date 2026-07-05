@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1090 586" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 z" fill="#1e1e1e"/></marker><marker id="ahg" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 z" fill="#868e96"/></marker></defs>
+<rect x="0" y="0" width="1090" height="586" fill="#ffffff"/>
+<text x="20" y="34" font-size="20" text-anchor="start" fill="#1e1e1e" font-weight="bold">Evenly  ·  data model</text>
+<rect x="450" y="40" width="230" height="108" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
+<text x="462" y="66" font-size="15" text-anchor="start" fill="#1e1e1e" font-weight="bold">profiles</text>
+<text x="462" y="88" font-size="13" text-anchor="start" fill="#495057">id (PK)</text><text x="462" y="105" font-size="13" text-anchor="start" fill="#495057">email</text><text x="462" y="122" font-size="13" text-anchor="start" fill="#495057">display_name</text>
+<rect x="110" y="230" width="230" height="108" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
+<text x="122" y="256" font-size="15" text-anchor="start" fill="#1e1e1e" font-weight="bold">groups</text>
+<text x="122" y="278" font-size="13" text-anchor="start" fill="#495057">id (PK)</text><text x="122" y="295" font-size="13" text-anchor="start" fill="#495057">name</text><text x="122" y="312" font-size="13" text-anchor="start" fill="#495057">created_by → profiles</text>
+<rect x="110" y="430" width="250" height="108" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
+<text x="122" y="456" font-size="15" text-anchor="start" fill="#1e1e1e" font-weight="bold">group_members</text>
+<text x="122" y="478" font-size="13" text-anchor="start" fill="#495057">group_id → groups</text><text x="122" y="495" font-size="13" text-anchor="start" fill="#495057">user_id → profiles</text><text x="122" y="512" font-size="13" text-anchor="start" fill="#495057">(unique together)</text>
+<rect x="440" y="230" width="250" height="130" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
+<text x="452" y="256" font-size="15" text-anchor="start" fill="#1e1e1e" font-weight="bold">expenses</text>
+<text x="452" y="278" font-size="13" text-anchor="start" fill="#495057">id (PK)</text><text x="452" y="295" font-size="13" text-anchor="start" fill="#495057">group_id → groups</text><text x="452" y="312" font-size="13" text-anchor="start" fill="#495057">payer_id → profiles</text><text x="452" y="329" font-size="13" text-anchor="start" fill="#495057">amount_cents</text>
+<rect x="440" y="430" width="250" height="116" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
+<text x="452" y="456" font-size="15" text-anchor="start" fill="#1e1e1e" font-weight="bold">expense_splits</text>
+<text x="452" y="478" font-size="13" text-anchor="start" fill="#495057">expense_id → expenses</text><text x="452" y="495" font-size="13" text-anchor="start" fill="#495057">user_id → profiles</text><text x="452" y="512" font-size="13" text-anchor="start" fill="#495057">amount_cents</text>
+<rect x="790" y="230" width="260" height="150" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
+<text x="802" y="256" font-size="15" text-anchor="start" fill="#1e1e1e" font-weight="bold">settlements</text>
+<text x="802" y="278" font-size="13" text-anchor="start" fill="#495057">id (PK)</text><text x="802" y="295" font-size="13" text-anchor="start" fill="#495057">group_id → groups</text><text x="802" y="312" font-size="13" text-anchor="start" fill="#495057">from_user → profiles</text><text x="802" y="329" font-size="13" text-anchor="start" fill="#495057">to_user → profiles</text><text x="802" y="346" font-size="13" text-anchor="start" fill="#495057">amount_cents</text>
+<polyline points="300,230 430,148" fill="none" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ahg)"/>
+<polyline points="225,430 225,338" fill="none" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ahg)"/>
+<polyline points="440,300 340,290" fill="none" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ahg)"/>
+<polyline points="560,430 560,360" fill="none" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ahg)"/>
+<polyline points="850,230 850,196 225,196 225,230" fill="none" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ahg)"/>
+<text x="700" y="72" font-size="13" text-anchor="start" fill="#868e96">→ marks a foreign key. Every table has Row Level</text><text x="700" y="89" font-size="13" text-anchor="start" fill="#868e96">Security; is_group_member() gates access to a group&#x27;s</text><text x="700" y="106" font-size="13" text-anchor="start" fill="#868e96">rows. Money is integer cents.</text>
+</svg>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Splitwise-OCR",
+  title: "Evenly",
   description: "Split shared expenses, settle up, and scan receipts with OCR.",
 };
 

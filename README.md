@@ -1,4 +1,4 @@
-# Splitwise-OCR
+# Evenly
 
 A multi-user expense-splitting web app. Make a group, add the people you share costs with, log
 expenses, and the app tracks who owes whom. When it is time to settle up, it works out the
@@ -27,7 +27,8 @@ Two things make this more than a standard CRUD app:
 - Groups with members.
 - Add expenses with an even split across selected members.
 - Per-group balances showing each person's net position.
-- One-click settle-up with simplified payment suggestions.
+- Settle-up: simplified payment suggestions, each with a "Mark as paid" button that
+  records the payment so the debt clears and balances drop to zero.
 - Receipt upload with in-browser OCR that prefills the expense amount.
 - Row level security so users only ever see groups they belong to.
 - Realtime updates so a shared group page refreshes across clients.
@@ -72,13 +73,22 @@ components/   GroupList, ExpenseForm, BalanceList, ReceiptUpload
 lib/          supabaseClient, settle (debt simplification), ocr, types
 supabase/     schema.sql (tables, RLS, storage bucket)
 tests/        vitest tests for settlement and the OCR parser
-docs/         concepts.md and design-decisions.md
+docs/         architecture.md (diagrams), concepts.md, design-decisions.md
 ```
 
 ## Results
 
-_Placeholder, fill in after building._
-
+- OCR: on 113 real receipt images from the ICDAR 2019 SROIE dataset, the parser reads the correct
+  grand total on 70% of receipts and extracts some total on 90%. Tuning the total-selection rules
+  against this dataset raised exact-total accuracy from 65% to 70% (see the eval below and
+  `docs/design-decisions.md`). Most remaining misses are Tesseract misreading the digits, not the
+  parser picking the wrong line.
 - Settlement: reduced N pairwise debts to M payments in the demo group (M <= members - 1).
 - Concurrency: handled K concurrent users on the free tier in testing.
-- OCR: parsed line items and total from sample receipts and prefilled the expense form.
+
+### Running the OCR accuracy eval
+
+`npm run eval:ocr` downloads a sample of SROIE receipts (cached in `.ocr-eval-cache/`), runs the
+real Tesseract + parser pipeline, and scores the extracted total against ground truth. Set the
+sample size with `OCR_EVAL_N` (default 30). It needs the network and Node >= 22.6, and is separate
+from `npm test`, which stays fast and offline.

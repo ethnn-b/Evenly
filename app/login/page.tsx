@@ -36,7 +36,7 @@ export default function LoginPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
       <h1 className="mb-1 text-2xl font-semibold">Sign in</h1>
-      <p className="mb-6 text-sm text-gray-600">Welcome back to Splitwise-OCR.</p>
+      <p className="mb-6 text-sm text-gray-600">Welcome back to Evenly.</p>
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div>

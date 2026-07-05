@@ -1,4 +1,4 @@
--- Splitwise-OCR schema: tables, row level security, and a storage bucket for receipts.
+-- Evenly schema: tables, row level security, and a storage bucket for receipts.
 --
 -- Run this in the Supabase SQL editor (or via the CLI) against a fresh project.
 -- It is written to be idempotent enough to re-run during development: it drops
@@ -229,6 +229,53 @@ create policy "members can add splits"
   );
 
 -- ---------------------------------------------------------------------------
+-- Settlements: a recorded payment from one member to another that pays down
+-- debt. Balances fold this in like an expense (payer credited, receiver
+-- debited), so recording the suggested settle-up payments drives balances to
+-- zero. No real money moves; this just records that it happened.
+-- ---------------------------------------------------------------------------
+create table if not exists public.settlements (
+  id           uuid primary key default gen_random_uuid(),
+  group_id     uuid not null references public.groups (id) on delete cascade,
+  from_user    uuid not null references public.profiles (id) on delete cascade,
+  to_user      uuid not null references public.profiles (id) on delete cascade,
+  amount_cents bigint not null check (amount_cents > 0),
+  created_by   uuid not null references public.profiles (id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  check (from_user <> to_user)
+);
+
+create index if not exists settlements_group_id_idx on public.settlements (group_id);
+
+alter table public.settlements enable row level security;
+
+-- Read: any member of the group can see its settlements.
+drop policy if exists "members can read settlements" on public.settlements;
+create policy "members can read settlements"
+  on public.settlements for select
+  to authenticated
+  using (public.is_group_member(group_id));
+
+-- Insert: only a participant records a settlement they are part of (the payer
+-- or the payee), and created_by must be themselves.
+drop policy if exists "participants can record settlements" on public.settlements;
+create policy "participants can record settlements"
+  on public.settlements for insert
+  to authenticated
+  with check (
+    public.is_group_member(group_id)
+    and created_by = auth.uid()
+    and (from_user = auth.uid() or to_user = auth.uid())
+  );
+
+-- Delete: whoever recorded it can undo it.
+drop policy if exists "recorder can delete settlements" on public.settlements;
+create policy "recorder can delete settlements"
+  on public.settlements for delete
+  to authenticated
+  using (created_by = auth.uid());
+
+-- ---------------------------------------------------------------------------
 -- New-user trigger: create a profile row whenever someone signs up.
 -- ---------------------------------------------------------------------------
 create or replace function public.handle_new_user()
@@ -282,3 +329,41 @@ create policy "users can delete their own receipts"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ---------------------------------------------------------------------------
+-- Realtime: let clients subscribe to expense and split changes so a group page
+-- updates live across sessions (milestone 9). A table only emits postgres_changes
+-- if it is in the supabase_realtime publication; without this the subscription
+-- connects but never fires. REPLICA IDENTITY FULL puts the whole row (not just
+-- the primary key) into the change feed, which realtime needs to evaluate the
+-- RLS policy for a subscriber, otherwise DELETE and RLS-filtered events are
+-- dropped. This block is idempotent, so re-running schema.sql is safe.
+-- ---------------------------------------------------------------------------
+alter table public.expenses       replica identity full;
+alter table public.expense_splits replica identity full;
+alter table public.settlements    replica identity full;
+
+do $$
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'expenses'
+  ) then
+    alter publication supabase_realtime add table public.expenses;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'expense_splits'
+  ) then
+    alter publication supabase_realtime add table public.expense_splits;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'settlements'
+  ) then
+    alter publication supabase_realtime add table public.settlements;
+  end if;
+end $$;

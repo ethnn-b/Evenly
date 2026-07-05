@@ -6,7 +6,7 @@ import { createBrowserSupabase } from "@/lib/supabaseClient";
 
 // Adds a member to a group by their email. We look the email up in profiles
 // (readable by any authenticated user) to get their user id, then insert a
-// membership row. The person must already have a Splitwise-OCR account.
+// membership row. The person must already have a Evenly account.
 export default function AddMemberForm({ groupId }: { groupId: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
