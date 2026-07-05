@@ -7,31 +7,83 @@ app reads the line items and total for you, so adding an expense is mostly autom
 
 Built with Next.js, TypeScript, and Supabase. Runs entirely on free tiers.
 
+<p align="center">
+  <img src="docs/media/04-group.png" alt="A group page showing members, per-person balances, and the expense list" width="600">
+  <br>
+  <sub>A group page: members, each person's net balance, and the shared expense list.</sub>
+</p>
+
 ## The novel angle
 
 Two things make this more than a standard CRUD app:
 
-1. **Receipt OCR auto-itemization.** Upload a receipt photo and Tesseract.js reads it in the
-   browser. The app parses item lines and the total, then prefills the expense form. This adds
-   a small computer-vision piece to an otherwise plain database app, and it runs client side so
-   the image never leaves the user's device.
+1. **Receipt OCR with auto-naming.** Upload a receipt photo and Tesseract.js reads it in the
+   browser. The app parses item lines and the total, then prefills the expense form (the detected
+   total is editable, so you can fix a misread digit) and suggests a name from the merchant at the
+   top of the receipt. This adds a computer-vision piece to an otherwise plain database app, and it
+   runs client side so the image never leaves the user's device.
 
 2. **Debt simplification.** Splitting costs in a group creates a tangle of small debts. The
    settlement step collapses that into the fewest payments using a greedy algorithm (repeatedly
    pay the biggest debtor's balance toward the biggest creditor). Six scattered IOUs can become
    three clean payments.
 
+Both features in action:
+
+<p align="center">
+  <img src="docs/media/07-receipt-scan.png" alt="A receipt photo uploaded; OCR reports the number of items read" width="560">
+  <br>
+  <sub>Upload a receipt photo and Tesseract.js reads it in the browser, no server round trip.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/08-ocr-prefill.png" alt="Detected total, parsed line items, and a suggested name prefilled into the form" width="440">
+  <br>
+  <sub>The detected total (editable, in case a digit is misread) and a merchant name prefill the expense form.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/05-settle-up.png" alt="Settle-up view suggesting two payments that clear the group" width="440">
+  <br>
+  <sub>Settle up: three lopsided balances collapse to two payments, each with a "Mark as paid" button.</sub>
+</p>
+
 ## Features
 
 - Email/password auth via Supabase Auth.
 - Groups with members.
-- Add expenses with an even split across selected members.
+- Add expenses with an even or unequal split (type each person's share) across selected members.
 - Per-group balances showing each person's net position.
 - Settle-up: simplified payment suggestions, each with a "Mark as paid" button that
   records the payment so the debt clears and balances drop to zero.
-- Receipt upload with in-browser OCR that prefills the expense amount.
+- Receipt upload with in-browser OCR that prefills the amount (editable if it misreads) and
+  auto-names the expense from the merchant on the receipt.
+- Amounts in rupees by default (one setting in `lib/currency.ts` to switch currency).
 - Row level security so users only ever see groups they belong to.
 - Realtime updates so a shared group page refreshes across clients.
+
+## A quick tour
+
+Sign up or sign in with email and password:
+
+<p align="center">
+  <img src="docs/media/01-sign-up.png" alt="Create an account form" width="360">
+  &nbsp;&nbsp;
+  <img src="docs/media/02-sign-in.png" alt="Sign in form" width="360">
+</p>
+
+The dashboard lists your groups and creates new ones:
+
+<p align="center">
+  <img src="docs/media/03-dashboard.png" alt="Dashboard listing the user's groups" width="600">
+</p>
+
+Adding an expense: pick who paid, the amount, and split it equally or by custom amounts across
+the members you select (a receipt scan prefills the amount and name):
+
+<p align="center">
+  <img src="docs/media/06-add-expense.png" alt="Add-expense form with payer, amount, and equal/unequal split options" width="440">
+</p>
 
 ## Tech stack
 
@@ -70,9 +122,10 @@ Open http://localhost:3000.
 ```
 app/          Next.js App Router routes (auth, dashboard, group page, add-expense)
 components/   GroupList, ExpenseForm, BalanceList, ReceiptUpload
-lib/          supabaseClient, settle (debt simplification), ocr, types
+lib/          supabaseClient, settle (debt simplification), ocr, expenseName (merchant naming),
+              currency, format, types
 supabase/     schema.sql (tables, RLS, storage bucket)
-tests/        vitest tests for settlement and the OCR parser
+tests/        vitest tests for settlement, the OCR parser, money formatting, and naming helpers
 docs/         architecture.md (diagrams), concepts.md, design-decisions.md
 ```
 
