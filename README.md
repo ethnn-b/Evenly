@@ -7,6 +7,8 @@ app reads the line items and total for you, so adding an expense is mostly autom
 
 Built with Next.js, TypeScript, and Supabase. Runs entirely on free tiers.
 
+**Live app:** https://evenly-evenly1.vercel.app
+
 <p align="center">
   <img src="docs/media/04-group.png" alt="A group page showing members, per-person balances, and the expense list" width="600">
   <br>
@@ -107,7 +109,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+The dev server starts at port 3000.
 
 ## Deploy
 
