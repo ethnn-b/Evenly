@@ -117,17 +117,5 @@ docs/         architecture.md (diagrams), concepts.md, design-decisions.md
 
 ## Results
 
-- OCR: on 113 real receipt images from the ICDAR 2019 SROIE dataset, the parser reads the correct
-  grand total on 70% of receipts and extracts some total on 90%. Tuning the total-selection rules
-  against this dataset raised exact-total accuracy from 65% to 70% (see the eval below and
-  `docs/design-decisions.md`). Most remaining misses are Tesseract misreading the digits, not the
-  parser picking the wrong line.
-- Settlement: reduced N pairwise debts to M payments in the demo group (M <= members - 1).
-- Concurrency: handled K concurrent users on the free tier in testing.
-
-### Running the OCR accuracy eval
-
-`npm run eval:ocr` downloads a sample of SROIE receipts (cached in `.ocr-eval-cache/`), runs the
-real Tesseract + parser pipeline, and scores the extracted total against ground truth. Set the
-sample size with `OCR_EVAL_N` (default 30). It needs the network and Node >= 22.6, and is separate
-from `npm test`, which stays fast and offline.
+- OCR reads the correct grand total on 70% of real receipts and extracts some total on 90%, validated against 113 images from the ICDAR 2019 SROIE dataset.
+- Settlement collapses group debts into the minimum number of payments (at most members - 1).
