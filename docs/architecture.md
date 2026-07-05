@@ -13,7 +13,8 @@ Three parts:
 - **Browser.** Next.js client components run here with the Supabase anon key.
   They render the auth pages, dashboard, group page, and add-expense form. The
   receipt OCR (Tesseract.js) also runs in the browser, so the image never
-  leaves the device and there is no server OCR route.
+  leaves the device and there is no server OCR route. The expense name is taken
+  from the merchant at the top of the OCR text, also on-device, with no model.
 - **Next.js (App Router, on Vercel).** `middleware.ts` keeps the auth session
   cookie fresh. Server components read data (already filtered by row level
   security) and compute balances before sending HTML. Client components are
@@ -31,11 +32,12 @@ fine: the database, not the key, is what controls access.
 
 ![Data model](diagrams/data-model.svg)
 
-Six tables, all money in integer cents. `profiles` mirrors `auth.users`.
-`groups` are owned by a creator; `group_members` is the join table that decides
-who can see a group. `expenses` records who paid and how much; `expense_splits`
-records each member's share (the shares sum to the expense amount).
-`settlements` records a payment from one member to another.
+Six tables, all money in integer minor units (paise for the default rupee
+currency, cents for USD). `profiles` mirrors `auth.users`. `groups` are owned by
+a creator; `group_members` is the join table that decides who can see a group.
+`expenses` records who paid and how much; `expense_splits` records each member's
+share (the shares sum to the expense amount, whether split evenly or by
+per-member amounts). `settlements` records a payment from one member to another.
 
 Every table has row level security. The `is_group_member()` helper (a
 `SECURITY DEFINER` function) is the gate: you can read or write a group's rows

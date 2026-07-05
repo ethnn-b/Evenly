@@ -121,7 +121,28 @@ is free, private, and simple. The design-decisions doc covers the trade in more 
 After OCR returns raw text, a small parser pulls out item/price lines. A receipt line tends to
 look like a name followed by a price, so a regex that captures a trailing number like `12.99`
 works as a first pass, with the largest or last such number near a "total" keyword treated as the
-total. It will not be perfect. The goal is to prefill the form, not to be an accountant.
+total. It will not be perfect. The goal is to prefill the form, not to be an accountant. Because
+it will not be perfect, the detected total is shown in an editable field, so a misread digit is a
+one-character fix rather than a reason to retype everything.
+
+## Auto-naming from the merchant
+
+The parser gets you an amount, but not a name for the expense. The name comes from the merchant:
+the store name is almost always the first real line of a receipt, and it is what you would call the
+expense anyway ("Trader Joe's", "Shell"). The code walks the top few lines, takes the first one that
+reads like a name (has letters and is not mostly digits), and cleans it up (title-case, trim quotes,
+cap the length). If no such line exists, it falls back to a generic "Receipt expense". The
+suggestion is only ever a default; the user can edit it before saving.
+
+This keeps naming in the same "everything client side" world as the OCR: no server, no API key, and
+nothing downloaded. It is also deterministic, so the same receipt always names the same way, with
+nothing to hallucinate.
+
+An early version instead ran a small language model (LaMini-Flan-T5-77M) in the browser to write a
+category-style title. It was dropped: a model that small could not follow the instruction and often
+echoed the prompt back instead of a title, for an ~80MB download and worse results than reading the
+store name. If category names ("Groceries", "Coffee") ever matter more than the store name, a hosted
+model behind a server route is the better upgrade than a tiny in-browser one.
 
 ## Storage and signed URLs
 

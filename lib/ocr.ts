@@ -167,7 +167,7 @@ export function parseReceiptText(text: string): ReceiptParseResult {
       continue; // never treat metadata lines as items
     }
 
-    const name = line.slice(0, found.index).replace(/[.\s:$£€-]+$/, "").trim();
+    const name = line.slice(0, found.index).replace(/[.\s:$£€₹-]+$/, "").trim();
     if (name.length === 0) continue; // a bare price with no label, skip it
 
     items.push({ name, price: found.cents });

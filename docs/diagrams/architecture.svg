@@ -15,6 +15,9 @@
 <rect x="60" y="376" width="260" height="58" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="2"/>
 <text x="190.0" y="401.0" font-size="15" text-anchor="middle" fill="#1e1e1e">Tesseract.js OCR</text><text x="190.0" y="420.0" font-size="15" text-anchor="middle" fill="#1e1e1e">(runs in the browser)</text>
 <text x="62" y="458" font-size="12" text-anchor="start" fill="#868e96">receipt image never leaves</text><text x="62" y="474" font-size="12" text-anchor="start" fill="#868e96">the device (no server OCR)</text>
+<rect x="60" y="490" width="260" height="58" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="2"/>
+<text x="190.0" y="515.0" font-size="15" text-anchor="middle" fill="#1e1e1e">Merchant auto-naming</text><text x="190.0" y="534.0" font-size="15" text-anchor="middle" fill="#1e1e1e">(from OCR text, browser)</text>
+<text x="62" y="572" font-size="12" text-anchor="start" fill="#868e96">names the expense from OCR</text><text x="62" y="588" font-size="12" text-anchor="start" fill="#868e96">text; the model runs on-device</text>
 <rect x="420" y="70" width="280" height="340" rx="10" fill="#e7f5ff" stroke="#4dabf7" stroke-width="2"/>
 <text x="434" y="98" font-size="17" text-anchor="start" fill="#4dabf7" font-weight="bold">Next.js  (App Router, Vercel)</text>
 <rect x="440" y="120" width="240" height="58" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>

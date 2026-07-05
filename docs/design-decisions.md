@@ -84,6 +84,68 @@ sample, with no regressions in that sample.
 are an OCR-engine limit, not a parser one. The unit tests in `tests/ocr.test.ts` lock in the
 selection rules against sample text; the image eval measures the whole pipeline.
 
+## Expense auto-naming: merchant-name heuristic vs in-browser LLM
+
+**Decision:** name the expense from the merchant, taking the first name-like line at the top of the
+OCR text (title-cased, cleaned up). No model.
+
+**Why:** on a receipt the store name is what you actually want the expense called ("Trader Joe's",
+"Shell"), and it is almost always the top line. Reading it off the text is deterministic and
+instant, needs no download, and cannot hallucinate or echo a prompt. It fits the client-side design:
+no API key, no server, and the receipt text stays on the device. The suggestion is always editable.
+
+**Alternatives:**
+
+- **Small in-browser LLM** (LaMini-Flan-T5-77M via Transformers.js). Tried and dropped. A model that
+  small could not follow the instruction reliably: it often echoed the prompt (returning literally
+  "The purchase, for example \"Grocery shopping\"") instead of a title, and it added an ~80MB
+  one-time download for worse results than just reading the store name.
+- **Hosted open-weights LLM** (Groq, Hugging Face) behind a route handler. Better quality and fast,
+  but it needs an API key held server-side, adds a route, and sends the receipt text to a third
+  party. This is the upgrade path if category-style names ("Groceries", "Coffee") ever matter more
+  than the store name.
+- **Local Ollama** via a route handler. Good quality and free, but the user has to run Ollama with a
+  model pulled, and it does not work on deployed Vercel without a hosted endpoint.
+
+**Trade-off:** the heuristic gives the store name, not a category. That is the right default for an
+expense title and costs nothing; a hosted model behind a route is the path if naming quality ever
+needs to be smarter.
+
+## Currency: integer minor units, rupees by default
+
+**Decision:** store money as integer minor units everywhere, and display and parse it through one
+currency setting (`lib/currency.ts`), defaulting to INR (₹).
+
+**Why:** integers dodge floating-point rounding across many splits (0.10 has no exact float, and the
+errors accumulate). Keeping the symbol in one constant makes switching currencies a one-line change
+and keeps every balance, expense, and settlement consistent.
+
+**Alternative:** per-group or per-expense currency with a stored exchange rate (multi-currency). More
+flexible, but it needs rate handling and conversion at display time, which is out of scope for v1.
+
+**Trade-off:** one app-wide currency is simpler and correct for a single-region group. Multi-currency
+is a noted next step; because amounts are already minor-unit integers, only formatting and a rate
+would need to change.
+
+## Even and unequal splits, and editable OCR output
+
+**Decision:** support an even split and an unequal split where you type each member's share, and the
+shares must sum to the total. The OCR-detected total and the suggested name are both editable.
+
+**Why:** the even split covers the common case; the unequal split handles "I only had the salad".
+Requiring the shares to add up to the total keeps `expense_splits` consistent with the expense amount,
+which is the invariant balances rely on. OCR and the LLM are best-effort, so their outputs are
+presented as editable defaults rather than trusted values.
+
+**Alternative:** percentage or ratio splits, or deriving the total from the sum of the shares.
+Percentages are a next step. Deriving the total conflicts with the OCR prefill, so the total stays
+the source of truth and the shares are validated against it (with a live "assigned / left" indicator
+and a "fill equally" shortcut to start from an even split and tweak).
+
+**Trade-off:** the user has to make unequal shares add up exactly. No schema change was needed:
+`expense_splits` already stores an arbitrary per-member amount, so the even and unequal paths write
+the same shape of rows.
+
 ## Greedy vs optimal settlement
 
 **Decision:** greedy (largest creditor against largest debtor, repeat).

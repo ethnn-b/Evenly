@@ -27,5 +27,9 @@ dist
 # ocr eval dataset cache (downloaded on demand by scripts/ocr-eval.mjs)
 .ocr-eval-cache
 
+# sample receipt images for manual testing (SROIE dataset, not redistributed).
+# The samples/README.md guide is tracked; the .jpg files are not.
+samples/*.jpg
+
 # local working notes, not published
 CLAUDE.md

@@ -54,6 +54,25 @@ suggested transfer; balances fold it in like an expense and drop to zero. Three
 unit tests cover the balance math. Needs supabase/add-settlements.sql applied,
 then a live check, before calling it done.
 
+Beyond v1: currency, unequal splits, and OCR corrections/auto-naming.
+- Currency is now a single setting (lib/currency.ts), defaulting to rupees (₹);
+  formatCents/dollarsToCents read from it so every amount in the app switched
+  from $ to ₹.
+- ExpenseForm has an Equally/Unequally toggle. Unequal mode gives each selected
+  member an amount input, validates the shares sum to the total, and offers a
+  "fill equally" starting point. No schema change (expense_splits already holds
+  per-member amounts).
+- The OCR-detected total is editable in ReceiptUpload (fixes a misread digit),
+  and after OCR the merchant name from the top of the receipt is suggested as
+  the expense name (deterministic, no model). The suggested name prefills the
+  description if it is empty. An earlier in-browser LLM (LaMini-Flan-T5-77M via
+  Transformers.js) was dropped: too small to follow the prompt, it echoed the
+  instruction instead of a title and added an ~80MB download for worse results.
+- Unit tests pass (parseSharesToCents and the naming helpers); production build
+  is clean. Still to do: a manual run against a real receipt to eyeball
+  OCR-total correction and the name suggestion. Docs and the architecture
+  diagram were updated for these features.
+
 Schema note: an early RLS bug blocked group creation (a creator could not read
 their own group before joining it, which broke both the insert-returning-select
 and the first-member insert). Fixed by adding `created_by = auth.uid()` to the
