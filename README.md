@@ -95,29 +95,13 @@ the members you select (a receipt scan prefills the amount and name):
 - Tesseract.js for OCR
 - Vitest for unit tests
 
-## Setup
-
-1. Create a Supabase project at https://supabase.com (free tier is fine).
-2. In the SQL editor, run `supabase/schema.sql` to create the tables, RLS policies, and the
-   receipts storage bucket.
-3. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY` from Project Settings -> API.
-4. Install and run:
+## Running locally
 
 ```
 npm install
 npm run dev
+npm test
 ```
-
-The dev server starts at port 3000.
-
-## Deploy
-
-- **App:** push the repo to GitHub and import it into Vercel. Set the two
-  `NEXT_PUBLIC_SUPABASE_*` env vars in the Vercel project settings. Vercel builds and hosts the
-  Next.js app on its free tier.
-- **Backend:** the same Supabase project serves production. Nothing else to host. The anon key
-  is meant to be public; data access is controlled by RLS, not by hiding the key.
 
 ## Folder structure
 
