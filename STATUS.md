@@ -1,8 +1,8 @@
 # Status
 
-Updated: 2026-07-05
-Phase: in progress
-Progress: 9/10 milestones
+Updated: 2026-07-06
+Phase: done
+Progress: 10/10 milestones
 
 ## Milestones
 - [x] Create the Supabase project, get URL and anon key into .env.local
@@ -14,7 +14,7 @@ Progress: 9/10 milestones
 - [x] Settlement algorithm plus settle-up UI
 - [x] Receipt upload and OCR prefill
 - [x] Realtime expense updates across clients
-- [ ] Deploy to Vercel, verify end to end
+- [x] Deploy to Vercel, verify end to end
 
 ## Current state
 Full v1 app is built and runs. 33 unit tests pass (settlement, OCR parser, money
@@ -78,11 +78,16 @@ their own group before joining it, which broke both the insert-returning-select
 and the first-member insert). Fixed by adding `created_by = auth.uid()` to the
 groups select policy. Folded into schema.sql; patch is supabase/fix-group-bootstrap.sql.
 
+Deployed to Vercel: https://evenly-evenly1.vercel.app
+Supabase env vars confirmed in the JS bundle. Auth endpoint reachable (Supabase
+returns 422 for an empty signup, confirming the API key is valid and the project
+is live). next upgraded to 15.5.20 and vitest to 3.2.6 to patch all critical CVEs
+before deploying.
+
 ## Blockers
 None.
 
 ## Next
-- Apply supabase/add-settlements.sql, then verify settle-up (record a payment,
-  confirm the debt clears and it updates live for the other client).
-- Deploy to Vercel (needs the Vercel account + env vars) for milestone 10.
-- Patch the next@15.1.0 CVE before deploying.
+- Apply supabase/add-settlements.sql, then verify settle-up live.
+- Custom domain (optional, currently on evenly-evenly1.vercel.app).
+- See "Next steps (after v1)" in CLAUDE.md for feature work.
