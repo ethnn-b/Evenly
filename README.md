@@ -42,6 +42,20 @@ Three things make this more than a standard CRUD app:
   <sub>Receipt scans and one-line "quick add" both go through a server route to an open-weight model, with an on-device fallback.</sub>
 </p>
 
+The two AI entry paths in action:
+
+<p align="center">
+  <img src="docs/media/09-quick-add.png" alt="The sentence 'I paid 900 for dinner, split equally among all' has filled the description, amount, payer, and an equal split across all members" width="440">
+  <br>
+  <sub>Quick add: one sentence fills the description, amount, payer, and split (checked for review before saving).</sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/10-receipt-ai.png" alt="A scanned grocery receipt with a suggested name 'Bens Grocer', a 'Groceries' category, and the detected total" width="440">
+  <br>
+  <sub>A receipt scan: the model suggests a name and a category and reads the total (₹77.20), all editable.</sub>
+</p>
+
 The OCR and debt features in action:
 
 <p align="center">
