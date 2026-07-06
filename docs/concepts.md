@@ -100,6 +100,33 @@ exact minimum is not practical, and it does not matter much in practice anyway.
 4. One of them now hits zero and drops out. The other keeps a reduced balance.
 5. Repeat until everyone is at zero.
 
+In pseudocode (mirrors `lib/settle.ts`; all amounts are integer cents):
+
+```
+function settle(balances):              # balances[i].net in cents, and sum(net) == 0
+    creditors = [(id,  net) for each balance where net > 0]   # people who are owed
+    debtors   = [(id, -net) for each balance where net < 0]   # people who owe (stored positive)
+    sort creditors by amount descending
+    sort debtors   by amount descending
+
+    payments = []
+    i = 0                               # points at the largest remaining creditor
+    j = 0                               # points at the largest remaining debtor
+    while i < len(creditors) and j < len(debtors):
+        pay = min(creditors[i].amount, debtors[j].amount)   # settle the smaller side fully
+        payments.append(from = debtors[j].id, to = creditors[i].id, amount = pay)
+        creditors[i].amount -= pay
+        debtors[j].amount   -= pay
+        if creditors[i].amount == 0: i += 1     # this creditor is paid in full
+        if debtors[j].amount   == 0: j += 1     # this debtor is settled
+    return payments
+```
+
+People with a zero balance never enter either list. The implementation sorts once and advances a
+pointer past whoever reaches zero, rather than re-picking the maximum each round; groups are small,
+so the single pass is fine and equivalent in result. Because the balances sum to zero, both lists
+empty together, so everyone ends settled.
+
 Each step zeroes at least one person, so it finishes in at most (members - 1) transactions. That
 upper bound alone is already much better than everyone-pays-everyone, and it is the number to
 quote. The greedy answer is not always the theoretical minimum, but it is close and runs in well
@@ -123,7 +150,9 @@ look like a name followed by a price, so a regex that captures a trailing number
 works as a first pass, with the largest or last such number near a "total" keyword treated as the
 total. It will not be perfect. The goal is to prefill the form, not to be an accountant. Because
 it will not be perfect, the detected total is shown in an editable field, so a misread digit is a
-one-character fix rather than a reason to retype everything.
+one-character fix rather than a reason to retype everything. The hosted model (see Hosted LLM
+suggestions) also reads the total, and the app uses it when the regex finds none, or offers it when
+the two disagree.
 
 ## Auto-naming from the merchant
 
@@ -134,15 +163,40 @@ reads like a name (has letters and is not mostly digits), and cleans it up (titl
 cap the length). If no such line exists, it falls back to a generic "Receipt expense". The
 suggestion is only ever a default; the user can edit it before saving.
 
-This keeps naming in the same "everything client side" world as the OCR: no server, no API key, and
-nothing downloaded. It is also deterministic, so the same receipt always names the same way, with
-nothing to hallucinate.
+The heuristic is now the instant baseline and the offline fallback: it fills the name the moment OCR
+finishes, and it is what the app uses when the hosted model (next section) is unavailable. It is
+deterministic, so the same receipt always names the same way, with nothing to hallucinate.
 
 An early version instead ran a small language model (LaMini-Flan-T5-77M) in the browser to write a
 category-style title. It was dropped: a model that small could not follow the instruction and often
 echoed the prompt back instead of a title, for an ~80MB download and worse results than reading the
-store name. If category names ("Groceries", "Coffee") ever matter more than the store name, a hosted
-model behind a server route is the better upgrade than a tiny in-browser one.
+store name. The better version of that idea, a hosted model behind a server route, is what the app
+now uses to upgrade the name and add a category and a total (next section).
+
+## Hosted LLM suggestions
+
+The heuristic gets a name but not a category, and it cannot read a total or parse a free-form
+sentence. For those, the app calls a hosted open-weight model (Llama 3.3 on Groq) through two
+Next.js route handlers.
+
+- **Why a server route.** The model needs an API key, and a key cannot ship to the browser. The
+  route handlers hold `GROQ_API_KEY`, and the auth middleware already guards them, so only a
+  logged-in user can spend it. The browser sends text; the key stays on the server.
+- **Why open-weight, via Groq.** The tasks (name a receipt, pick a category, read a total, parse a
+  sentence) are small extraction jobs an open model handles well, and Groq's free tier is fast and
+  cheap. Nothing here needs a frontier model.
+- **Structured output.** Both routes ask for JSON (the model's JSON mode) and then validate it: the
+  category is coerced to the fixed list, the total and amount are parsed to integer minor units, and
+  member ids are checked against the real group. The model cannot invent a member or an off-list
+  category, because the server drops anything that is not valid.
+- **Graceful fallback.** With no key, or on any error or timeout, the receipt name falls back to the
+  heuristic and the total to the regex parser; quick add reports that it could not read the sentence.
+  The feature is additive: the app never breaks when the model is off.
+
+For "quick add", the sentence and the group's members (id and name) go to the model, which returns a
+description, an amount, who paid, and who shares the cost. Resolving a name like "Alex" to a member
+id happens against the list the server sent, so a typo or a stranger's name simply does not match
+rather than creating a bad row.
 
 ## Storage and signed URLs
 

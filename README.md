@@ -3,7 +3,8 @@
 A multi-user expense-splitting web app. Make a group, add the people you share costs with, log
 expenses, and the app tracks who owes whom. When it is time to settle up, it works out the
 smallest set of payments that clears everyone's debts. You can also photograph a receipt and the
-app reads the line items and total for you, so adding an expense is mostly automatic.
+app reads the line items and total for you, or type an expense in plain English, so adding one is
+mostly automatic.
 
 Built with Next.js, TypeScript, and Supabase. Runs entirely on free tiers.
 
@@ -17,7 +18,7 @@ Built with Next.js, TypeScript, and Supabase. Runs entirely on free tiers.
 
 ## The novel angle
 
-Two things make this more than a standard CRUD app:
+Three things make this more than a standard CRUD app:
 
 1. **Receipt OCR with auto-naming.** Upload a receipt photo and Tesseract.js reads it in the
    browser. The app parses item lines and the total, then prefills the expense form (the detected
@@ -30,7 +31,18 @@ Two things make this more than a standard CRUD app:
    pay the biggest debtor's balance toward the biggest creditor). Six scattered IOUs can become
    three clean payments.
 
-Both features in action:
+3. **AI-assisted entry.** An open-weight model (Llama 3.3, via Groq) turns messy receipt text into
+   a cleaner name, a category, and a total, and turns a sentence like "I paid 900 for dinner, split
+   among all" into a filled-in expense. It runs behind a server route so the key stays private, and
+   it falls back to the plain heuristics when no key is set, so the app still works without it.
+
+<p align="center">
+  <img src="docs/diagrams/ai-suggestions.svg" alt="Receipt scans and quick-add sentences flow through a server route to an open-weight model and back into the form" width="720">
+  <br>
+  <sub>Receipt scans and one-line "quick add" both go through a server route to an open-weight model, with an on-device fallback.</sub>
+</p>
+
+The OCR and debt features in action:
 
 <p align="center">
   <img src="docs/media/07-receipt-scan.png" alt="A receipt photo uploaded; OCR reports the number of items read" width="560">
@@ -60,6 +72,10 @@ Both features in action:
   records the payment so the debt clears and balances drop to zero.
 - Receipt upload with in-browser OCR that prefills the amount (editable if it misreads) and
   auto-names the expense from the merchant on the receipt.
+- Optional AI pass on a scan: a cleaner name, a suggested category, and a total cross-check from an
+  open-weight model, with the OCR heuristics as the fallback.
+- Natural-language quick add: describe an expense in a sentence and it fills the form (amount, who
+  paid, and who shares the cost).
 - Amounts in rupees by default (one setting in `lib/currency.ts` to switch currency).
 - Row level security so users only ever see groups they belong to.
 - Realtime updates so a shared group page refreshes across clients.
@@ -93,25 +109,20 @@ the members you select (a receipt scan prefills the amount and name):
 - Tailwind CSS
 - Supabase: Auth, Postgres, Storage, Realtime
 - Tesseract.js for OCR
+- Groq (hosted open-weight LLM) for expense name, category, total, and natural-language entry
 - Vitest for unit tests
-
-## Running locally
-
-```
-npm install
-npm run dev
-npm test
-```
 
 ## Folder structure
 
 ```
 app/          Next.js App Router routes (auth, dashboard, group page, add-expense)
+              + api/ route handlers (suggest-expense, parse-expense)
 components/   GroupList, ExpenseForm, BalanceList, ReceiptUpload
-lib/          supabaseClient, settle (debt simplification), ocr, expenseName (merchant naming),
-              currency, format, types
+lib/          supabaseClient, settle (debt simplification), ocr, expenseName (heuristic naming),
+              suggestExpense + parseExpense (LLM route clients), categories, currency, format, types
 supabase/     schema.sql (tables, RLS, storage bucket)
-tests/        vitest tests for settlement, the OCR parser, money formatting, and naming helpers
+tests/        vitest tests for settlement, OCR parsing, money formatting, naming, categories,
+              and the suggestion/parse wrappers
 docs/         architecture.md (diagrams), concepts.md, design-decisions.md
 ```
 

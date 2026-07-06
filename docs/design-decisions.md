@@ -84,32 +84,60 @@ sample, with no regressions in that sample.
 are an OCR-engine limit, not a parser one. The unit tests in `tests/ocr.test.ts` lock in the
 selection rules against sample text; the image eval measures the whole pipeline.
 
-## Expense auto-naming: merchant-name heuristic vs in-browser LLM
+## Expense auto-naming: heuristic baseline, hosted-model upgrade
 
-**Decision:** name the expense from the merchant, taking the first name-like line at the top of the
-OCR text (title-cased, cleaned up). No model.
+**Decision:** name the expense from the merchant heuristic (the first name-like line at the top of
+the OCR text, title-cased and cleaned) as the instant baseline, and upgrade it with a hosted
+open-weight model that also adds a category and reads the total (see the next section). The heuristic
+is the offline fallback.
 
-**Why:** on a receipt the store name is what you actually want the expense called ("Trader Joe's",
-"Shell"), and it is almost always the top line. Reading it off the text is deterministic and
-instant, needs no download, and cannot hallucinate or echo a prompt. It fits the client-side design:
-no API key, no server, and the receipt text stays on the device. The suggestion is always editable.
+**Why:** the store name is what you actually want the expense called ("Trader Joe's", "Shell") and is
+almost always the top line, so the heuristic gives a usable title instantly, with no download and
+nothing to hallucinate. It fills the field the moment OCR finishes and stands alone when the model is
+unavailable. The model then improves the wording and adds what the heuristic cannot (a category, and
+a total cross-check). The suggestion is always editable.
 
 **Alternatives:**
 
+- **Heuristic only (no model).** What the app shipped with. Simplest and fully offline, but it gives
+  the store name and nothing else: no category, no help on the total, no natural-language entry.
 - **Small in-browser LLM** (LaMini-Flan-T5-77M via Transformers.js). Tried and dropped. A model that
   small could not follow the instruction reliably: it often echoed the prompt (returning literally
-  "The purchase, for example \"Grocery shopping\"") instead of a title, and it added an ~80MB
-  one-time download for worse results than just reading the store name.
-- **Hosted open-weights LLM** (Groq, Hugging Face) behind a route handler. Better quality and fast,
-  but it needs an API key held server-side, adds a route, and sends the receipt text to a third
-  party. This is the upgrade path if category-style names ("Groceries", "Coffee") ever matter more
-  than the store name.
+  "The purchase, for example \"Grocery shopping\"") instead of a title, for an ~80MB one-time
+  download and worse results than just reading the store name.
 - **Local Ollama** via a route handler. Good quality and free, but the user has to run Ollama with a
   model pulled, and it does not work on deployed Vercel without a hosted endpoint.
 
-**Trade-off:** the heuristic gives the store name, not a category. That is the right default for an
-expense title and costs nothing; a hosted model behind a route is the path if naming quality ever
-needs to be smarter.
+**Trade-off:** the upgrade adds a server route and a dependency on a hosted model, but it is additive
+(the heuristic stays the baseline and the fallback), so the app keeps working with no key.
+
+## Hosted LLM suggestions (Groq) and natural-language entry
+
+**Decision:** call a hosted open-weight model (Llama 3.3 on Groq) from two Next.js route handlers,
+one that turns receipt text into a name, category, and total, and one that turns a sentence into a
+filled-in expense. Both validate the model's JSON on the server and fall back to the heuristics when
+the model is off.
+
+**Why:**
+
+- **Server route, not the browser.** The API key cannot ship to the client, so the routes hold it
+  and the existing auth middleware limits them to logged-in users. The browser sends text only.
+- **Open-weight via Groq.** These are small extraction jobs, not frontier work; an open model on
+  Groq's fast, free tier fits well and keeps cost near zero.
+- **Validated structured output.** The routes ask for JSON and then check it: the category is coerced
+  to the fixed list, amounts and totals become integer minor units, and member ids are matched
+  against the real group. The model cannot invent a member or an off-list category.
+- **Graceful fallback.** No key, an error, or a timeout falls back to the heuristic name and the
+  regex total; quick add reports it could not read the sentence. The feature never breaks the app.
+
+**Alternatives:** a hosted closed model (better quality, higher cost, and overkill for extraction);
+a model in the browser (dropped, see the previous section); no AI at all (the shipped baseline).
+
+**Trade-offs and limits:** the category is suggested and shown but not yet stored (the `expenses`
+table has no category column), so it is display-only for now; persisting it is a small schema change
+left as a next step. There is no rate limiting on the routes beyond the auth gate, which is fine on
+the free tier for a small group. Natural-language entry has no offline fallback, because parsing a
+free-form sentence genuinely needs the model.
 
 ## Currency: integer minor units, rupees by default
 

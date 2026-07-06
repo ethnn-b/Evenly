@@ -16,8 +16,8 @@
 <text x="190.0" y="401.0" font-size="15" text-anchor="middle" fill="#1e1e1e">Tesseract.js OCR</text><text x="190.0" y="420.0" font-size="15" text-anchor="middle" fill="#1e1e1e">(runs in the browser)</text>
 <text x="62" y="458" font-size="12" text-anchor="start" fill="#868e96">receipt image never leaves</text><text x="62" y="474" font-size="12" text-anchor="start" fill="#868e96">the device (no server OCR)</text>
 <rect x="60" y="490" width="260" height="58" rx="10" fill="#fff3bf" stroke="#f08c00" stroke-width="2"/>
-<text x="190.0" y="515.0" font-size="15" text-anchor="middle" fill="#1e1e1e">Merchant auto-naming</text><text x="190.0" y="534.0" font-size="15" text-anchor="middle" fill="#1e1e1e">(from OCR text, browser)</text>
-<text x="62" y="572" font-size="12" text-anchor="start" fill="#868e96">names the expense from OCR</text><text x="62" y="588" font-size="12" text-anchor="start" fill="#868e96">text; the model runs on-device</text>
+<text x="190.0" y="515.0" font-size="15" text-anchor="middle" fill="#1e1e1e">Suggestion baseline</text><text x="190.0" y="534.0" font-size="15" text-anchor="middle" fill="#1e1e1e">(heuristic name, in browser)</text>
+<text x="62" y="572" font-size="12" text-anchor="start" fill="#868e96">instant name from OCR text; a</text><text x="62" y="588" font-size="12" text-anchor="start" fill="#868e96">server route upgrades it (see AI)</text>
 <rect x="420" y="70" width="280" height="340" rx="10" fill="#e7f5ff" stroke="#4dabf7" stroke-width="2"/>
 <text x="434" y="98" font-size="17" text-anchor="start" fill="#4dabf7" font-weight="bold">Next.js  (App Router, Vercel)</text>
 <rect x="440" y="120" width="240" height="58" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
@@ -26,6 +26,8 @@
 <text x="560.0" y="212.5" font-size="15" text-anchor="middle" fill="#1e1e1e">Server Components</text><text x="560.0" y="231.5" font-size="15" text-anchor="middle" fill="#1e1e1e">(RLS-filtered reads,</text><text x="560.0" y="250.5" font-size="15" text-anchor="middle" fill="#1e1e1e">compute balances)</text>
 <rect x="440" y="274" width="240" height="58" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
 <text x="560.0" y="299.0" font-size="15" text-anchor="middle" fill="#1e1e1e">Client Components</text><text x="560.0" y="318.0" font-size="15" text-anchor="middle" fill="#1e1e1e">(shipped to the browser)</text>
+<rect x="440" y="346" width="240" height="52" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
+<text x="560.0" y="371.0" font-size="14" text-anchor="middle" fill="#1e1e1e">Route handlers (Groq key):</text><text x="560.0" y="389.0" font-size="13" text-anchor="middle" fill="#1e1e1e">suggest-expense &#183; parse-expense</text>
 <rect x="780" y="70" width="300" height="540" rx="10" fill="#ebfbee" stroke="#40c057" stroke-width="2"/>
 <text x="794" y="98" font-size="17" text-anchor="start" fill="#40c057" font-weight="bold">Supabase  (free tier)</text>
 <rect x="800" y="120" width="260" height="52" rx="10" fill="#ffffff" stroke="#495057" stroke-width="2"/>
@@ -43,4 +45,9 @@
 <text x="700" y="187" font-size="12" text-anchor="start" fill="#364fc7">server client</text><text x="700" y="203" font-size="12" text-anchor="start" fill="#364fc7">(SSR reads, RLS)</text>
 <polyline points="190,610 190,650 930,650 930,610" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah)"/>
 <text x="360" y="667" font-size="12" text-anchor="start" fill="#364fc7">anon client: auth, CRUD, realtime WebSocket, storage upload</text>
+<polyline points="560,398 560,470" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah)"/>
+<text x="566" y="440" font-size="12" text-anchor="start" fill="#364fc7">LLM call</text>
+<rect x="420" y="470" width="280" height="64" rx="10" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
+<text x="560.0" y="497.0" font-size="15" text-anchor="middle" fill="#1e1e1e">Groq  (open-weight LLM)</text><text x="560.0" y="518.0" font-size="13" text-anchor="middle" fill="#1e1e1e">name &#183; category &#183; total &#183; quick-add</text>
+<text x="420" y="556" font-size="12" text-anchor="start" fill="#868e96">server-side; the key never reaches the browser,</text><text x="420" y="572" font-size="12" text-anchor="start" fill="#868e96">and it falls back to the browser heuristic if unset</text>
 </svg>
