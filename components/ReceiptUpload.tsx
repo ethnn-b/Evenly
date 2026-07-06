@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { runOcr } from "@/lib/ocr";
-import { guessMerchantName } from "@/lib/expenseName";
+import { suggestExpense, heuristicSuggestion } from "@/lib/suggestExpense";
+import type { ExpenseCategory } from "@/lib/categories";
 import { formatCents, dollarsToCents } from "@/lib/format";
 import { DEFAULT_CURRENCY } from "@/lib/currency";
 import type { ReceiptItem } from "@/lib/types";
@@ -15,8 +16,11 @@ import type { ReceiptItem } from "@/lib/types";
 // field. Correcting it here re-sends the total to the parent, which keeps the
 // expense amount in sync.
 //
-// After OCR, the merchant name from the top of the receipt is suggested as the
-// expense name and handed up via onNamed. No model, no network round-trip.
+// After OCR, a name is suggested in two stages: first the instant local
+// heuristic (merchant name from the top of the receipt), then an upgrade from an
+// open-weight model (via /api/suggest-expense) that also proposes a category.
+// The suggested name is handed up via onNamed; if the model is unavailable the
+// heuristic stands on its own.
 export default function ReceiptUpload({
   onParsed,
   onNamed,
@@ -33,15 +37,43 @@ export default function ReceiptUpload({
   const [totalInput, setTotalInput] = useState(""); // detected total, editable
   const [error, setError] = useState<string | null>(null);
   const [suggestedName, setSuggestedName] = useState("");
+  const [suggestedCategory, setSuggestedCategory] =
+    useState<ExpenseCategory | null>(null);
+  const [naming, setNaming] = useState(false);
+  // The model's total, offered when it disagrees with the parser's; and a flag
+  // for when the model's total filled a field the parser left empty.
+  const [aiTotalOffer, setAiTotalOffer] = useState<number | null>(null);
+  const [totalEstimated, setTotalEstimated] = useState(false);
+  // Cancels an in-flight suggestion request when a newer scan starts.
+  const suggestAbort = useRef<AbortController | null>(null);
+  // Mirrors totalInput so the async suggestion callback reads the latest value
+  // (not a stale closure) when deciding whether to adopt the model's total.
+  const totalInputRef = useRef("");
+
+  // Set the editable total field and keep the ref in sync.
+  function writeTotalField(value: string) {
+    setTotalInput(value);
+    totalInputRef.current = value;
+  }
+
+  // Adopt a total (from the model) into the field and push it to the parent.
+  function applyTotal(cents: number, forItems: ReceiptItem[]) {
+    writeTotalField((cents / 100).toFixed(2));
+    onParsed({ total: cents, items: forItems });
+  }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    suggestAbort.current?.abort();
     setError(null);
     setItems([]);
-    setTotalInput("");
+    writeTotalField("");
     setSuggestedName("");
+    setSuggestedCategory(null);
+    setAiTotalOffer(null);
+    setTotalEstimated(false);
     setProgress(0);
     setStatus("running");
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -50,17 +82,50 @@ export default function ReceiptUpload({
     try {
       const result = await runOcr(file, (f) => setProgress(f));
       setItems(result.items);
-      setTotalInput(result.total !== null ? (result.total / 100).toFixed(2) : "");
+      writeTotalField(
+        result.total !== null ? (result.total / 100).toFixed(2) : ""
+      );
       setStatus("done");
       onParsed({ total: result.total, items: result.items });
 
-      // Suggest a name: the merchant name from the top of the receipt text.
-      // Deterministic and instant, so no loading state is needed.
-      if (onNamed) {
-        const name = guessMerchantName(result.rawText);
-        setSuggestedName(name);
-        onNamed(name);
-      }
+      // Stage 1: instant local heuristic so the form fills with no wait.
+      const baseline = heuristicSuggestion(result.rawText);
+      setSuggestedName(baseline.name);
+      onNamed?.(baseline.name);
+
+      // Stage 2: ask the model for a better title and a category. If it answers
+      // before a newer scan supersedes this one, upgrade the suggestion in
+      // place. onNamed is safe to call again: the form only takes it while the
+      // user has not edited the description. suggestExpense never rejects (it
+      // falls back to the heuristic), so a plain .then covers every case.
+      const controller = new AbortController();
+      suggestAbort.current = controller;
+      setNaming(true);
+      suggestExpense(result.rawText, { signal: controller.signal })
+        .then((s) => {
+          if (controller.signal.aborted) return;
+          setSuggestedName(s.name);
+          setSuggestedCategory(s.category);
+          if (s.source === "llm") onNamed?.(s.name);
+
+          // Total: if the parser found none, adopt the model's; if both exist
+          // but disagree, offer the model's without overwriting.
+          if (s.totalCents != null) {
+            const current = dollarsToCents(totalInputRef.current);
+            if (current == null) {
+              applyTotal(s.totalCents, result.items);
+              setTotalEstimated(true);
+            } else if (current !== s.totalCents) {
+              setAiTotalOffer(s.totalCents);
+            }
+          }
+        })
+        .finally(() => {
+          if (suggestAbort.current === controller) {
+            suggestAbort.current = null;
+            setNaming(false);
+          }
+        });
     } catch (err) {
       setStatus("error");
       setError(err instanceof Error ? err.message : "OCR failed.");
@@ -71,7 +136,9 @@ export default function ReceiptUpload({
   // amount follows it. A blank/invalid entry sends null (parent leaves the
   // amount alone).
   function onTotalEdit(value: string) {
-    setTotalInput(value);
+    writeTotalField(value);
+    setTotalEstimated(false); // user's own number now
+    setAiTotalOffer(null);
     onParsed({ total: dollarsToCents(value), items });
   }
 
@@ -135,13 +202,40 @@ export default function ReceiptUpload({
                 className="w-32 rounded border border-gray-300 px-2 py-1 text-right focus:border-gray-500 focus:outline-none"
               />
             </div>
+            {totalEstimated && (
+              <p className="mt-1 text-xs text-gray-500">
+                No clear total line was found, so this is the model&apos;s read.
+                Double-check it.
+              </p>
+            )}
+            {aiTotalOffer != null && (
+              <button
+                type="button"
+                onClick={() => {
+                  applyTotal(aiTotalOffer, items);
+                  setAiTotalOffer(null);
+                }}
+                className="mt-1 block text-xs text-gray-600 underline hover:text-gray-900"
+              >
+                Model read {formatCents(aiTotalOffer)} instead. Use it?
+              </button>
+            )}
           </div>
 
           {suggestedName && (
             <p className="text-xs text-gray-600">
               Suggested name:{" "}
-              <span className="font-medium text-gray-900">{suggestedName}</span>{" "}
-              (edit it in the form below)
+              <span className="font-medium text-gray-900">{suggestedName}</span>
+              {suggestedCategory && (
+                <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-gray-700">
+                  {suggestedCategory}
+                </span>
+              )}
+              {naming ? (
+                <span className="ml-2 text-gray-400">refining...</span>
+              ) : (
+                " (edit it in the form below)"
+              )}
             </p>
           )}
         </div>

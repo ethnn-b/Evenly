@@ -24,6 +24,19 @@ export function dollarsToCents(input: string): number | null {
 }
 
 /**
+ * Convert a major-unit number (e.g. 45 or 42.4 dollars/rupees) to integer minor
+ * units, rounding to the nearest unit. Returns null for anything that is not a
+ * positive finite number. Used to sanitize amounts that come back from the LLM
+ * routes (which return a plain number, not a typed string like dollarsToCents).
+ */
+export function majorToCents(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return Math.round(value * 100);
+}
+
+/**
  * Split a total evenly across n members, distributing the leftover units one
  * each to the first few so the shares sum exactly to the total.
  * e.g. splitEvenly(1000, 3) -> [334, 333, 333].

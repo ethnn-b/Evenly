@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   formatCents,
   dollarsToCents,
+  majorToCents,
   splitEvenly,
   parseSharesToCents,
 } from "../lib/format";
@@ -26,6 +27,24 @@ describe("dollarsToCents", () => {
     expect(dollarsToCents("")).toBeNull();
     expect(dollarsToCents("abc")).toBeNull();
     expect(dollarsToCents("-3")).toBeNull();
+  });
+});
+
+describe("majorToCents", () => {
+  it("converts positive numbers to minor units, rounding", () => {
+    expect(majorToCents(45)).toBe(4500);
+    expect(majorToCents(42.4)).toBe(4240);
+    expect(majorToCents(19.999)).toBe(2000);
+  });
+
+  it("returns null for zero, negatives, and non-finite or non-number input", () => {
+    expect(majorToCents(0)).toBeNull();
+    expect(majorToCents(-5)).toBeNull();
+    expect(majorToCents(NaN)).toBeNull();
+    expect(majorToCents(Infinity)).toBeNull();
+    expect(majorToCents("45")).toBeNull();
+    expect(majorToCents(null)).toBeNull();
+    expect(majorToCents(undefined)).toBeNull();
   });
 });
 

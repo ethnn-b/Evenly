@@ -11,6 +11,7 @@ import {
 } from "@/lib/format";
 import { DEFAULT_CURRENCY } from "@/lib/currency";
 import ReceiptUpload from "./ReceiptUpload";
+import { parseExpense } from "@/lib/parseExpense";
 import type { MemberWithProfile } from "@/lib/types";
 
 type SplitMode = "equal" | "unequal";
@@ -32,6 +33,10 @@ export default function ExpenseForm({
   const router = useRouter();
 
   const [description, setDescription] = useState("");
+  // True once the user edits the description by hand. Until then, receipt
+  // suggestions (the instant heuristic, then the model upgrade) may fill it;
+  // after, the user's text is left alone.
+  const [descTouched, setDescTouched] = useState(false);
   const [amount, setAmount] = useState(""); // total, in major units as typed
   const [payerId, setPayerId] = useState(currentUserId);
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
@@ -42,6 +47,11 @@ export default function ExpenseForm({
   const [shares, setShares] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Natural-language quick add.
+  const [nlText, setNlText] = useState("");
+  const [nlLoading, setNlLoading] = useState(false);
+  const [nlError, setNlError] = useState<string | null>(null);
 
   function toggle(userId: string) {
     setSelected((prev) => {
@@ -84,6 +94,32 @@ export default function ExpenseForm({
       });
       return next;
     });
+  }
+
+  // Natural-language quick add: send the sentence plus the member list to the
+  // model and prefill the form from what comes back. Member names resolve to
+  // real ids server-side. No local fallback (a sentence needs the model), so on
+  // failure we ask the user to fill the form by hand.
+  async function onParseNl() {
+    const text = nlText.trim();
+    if (!text) return;
+    setNlError(null);
+    setNlLoading(true);
+    const result = await parseExpense(
+      text,
+      members.map((m) => ({ id: m.user_id, name: nameOf(m) })),
+      currentUserId
+    );
+    setNlLoading(false);
+    if (!result) {
+      setNlError("Could not read that. Add it in the form below, or rephrase.");
+      return;
+    }
+    setDescription(result.description);
+    setDescTouched(true);
+    setAmount((result.amountCents / 100).toFixed(2));
+    if (result.payerId) setPayerId(result.payerId);
+    if (result.memberIds.length > 0) setSelected(new Set(result.memberIds));
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -160,13 +196,47 @@ export default function ExpenseForm({
 
   return (
     <div className="space-y-6">
+      <div className="rounded border border-gray-200 bg-white p-4">
+        <label htmlFor="nl" className="mb-2 block text-sm font-medium">
+          Quick add (describe it)
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="nl"
+            type="text"
+            value={nlText}
+            onChange={(e) => setNlText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onParseNl();
+              }
+            }}
+            placeholder={'e.g. "I paid 800 for dinner, split with Alex and Sam"'}
+            className="flex-1 rounded border border-gray-300 px-3 py-2 focus:border-gray-500 focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={onParseNl}
+            disabled={nlLoading || !nlText.trim()}
+            className="rounded bg-gray-900 px-3 py-2 text-white hover:bg-gray-700 disabled:opacity-50"
+          >
+            {nlLoading ? "Reading..." : "Parse"}
+          </button>
+        </div>
+        {nlError && <p className="mt-2 text-sm text-red-600">{nlError}</p>}
+        <p className="mt-2 text-xs text-gray-500">
+          Fills the form below from a sentence. Check it before saving.
+        </p>
+      </div>
+
       <ReceiptUpload
         onParsed={({ total }) => {
           if (total !== null) setAmount((total / 100).toFixed(2));
         }}
-        onNamed={(name) =>
-          setDescription((prev) => (prev.trim() ? prev : name))
-        }
+        onNamed={(name) => {
+          if (!descTouched) setDescription(name);
+        }}
       />
 
       <form onSubmit={onSubmit} className="space-y-4">
@@ -178,7 +248,10 @@ export default function ExpenseForm({
             id="desc"
             type="text"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              setDescTouched(true);
+            }}
             maxLength={200}
             placeholder="Dinner, groceries, ..."
             className="w-full rounded border border-gray-300 px-3 py-2 focus:border-gray-500 focus:outline-none"
