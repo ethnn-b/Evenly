@@ -195,6 +195,13 @@ managing a server, TLS, backups, and uptime, which is not the point of this proj
 caps). For a portfolio app those limits are fine, and hitting them would itself be a good
 problem and a story to tell.
 
+**Staying live and cost:** the Vercel Hobby plan and the Supabase free tier both run indefinitely
+at no charge and require no credit card. The one gotcha is Supabase's auto-pause: a project with
+no database activity for seven days is paused, and the first request after that wakes it back up
+(adds a few seconds to the first load). Auto-pause can be disabled in the Supabase dashboard
+under Settings > General. Free-tier caps are generous for a portfolio project: Vercel gives 100 GB
+bandwidth per month, Supabase gives 500 MB of database storage and 1 GB of file storage.
+
 ## Where OCR should run (client vs a route handler)
 
 **Decision:** run OCR client side in v1.
